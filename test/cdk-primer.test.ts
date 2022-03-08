@@ -1,17 +1,41 @@
-// import { Template } from '@aws-cdk/assertions';
-// import * as cdk from '@aws-cdk/core';
-// import * as CdkPrimer from '../lib/cdk-primer-stack';
+import { expect as expectCDK, haveResource } from '@aws-cdk/assert';
+import cdk = require('@aws-cdk/core');
+import { HitCounter }  from '../lib/hitcounter';
+import * as lambda from '@aws-cdk/aws-lambda';
 
-// example test. To run these tests, uncomment this file along with the
-// example resource in lib/cdk-primer-stack.ts
-test('SQS Queue Created', () => {
-//   const app = new cdk.App();
-//     // WHEN
-//   const stack = new CdkPrimer.CdkPrimerStack(app, 'MyTestStack');
-//     // THEN
-//   const template = Template.fromStack(stack);
-
-//   template.hasResourceProperties('AWS::SQS::Queue', {
-//     VisibilityTimeout: 300
-//   });
+test('DynamoDB Table Created', () => {
+  const stack = new cdk.Stack();
+  // WHEN
+  new HitCounter(stack, 'MyTestConstruct', {
+    downstream:  new lambda.Function(stack, 'TestFunction', {
+      runtime: lambda.Runtime.NODEJS_12_X,
+      handler: 'lambda.handler',
+      description: 'aws:states:opt-out',
+      code: lambda.Code.fromInline('test')
+    })
+  });
+  // THEN
+  expectCDK(stack).to(haveResource("AWS::DynamoDB::Table"));
 });
+
+test('Lambda Has Environment Variables', () => {
+  const stack = new cdk.Stack();
+  // WHEN
+  new HitCounter(stack, 'MyTestConstruct', {
+    downstream:  new lambda.Function(stack, 'TestFunction', {
+      runtime: lambda.Runtime.NODEJS_12_X,
+      handler: 'lambda.handler',
+      description: 'aws:states:opt-out',
+      code: lambda.Code.fromInline('test')
+    })
+  });
+  // THEN
+  expectCDK(stack).to(haveResource("AWS::Lambda::Function", {
+    Environment: {
+      Variables: {
+        DOWNSTREAM_FUNCTION_NAME: {"Ref": "TestFunction22AD90FC"},
+        HITS_TABLE_NAME: {"Ref": "MyTestConstructHits24A357F0"}
+      }
+    }
+  }));
+})
